@@ -1,0 +1,23 @@
+# Reverse proxy con HTTPS automático.
+# El dominio viene del env var DOMAIN_NAME (definido en docker-compose.prod.yml).
+# Caddy:
+# - Genera el cert HTTPS de Let's Encrypt automáticamente al primer arranque.
+# - Renueva el cert cada 60 días sin intervención.
+# - Redirige HTTP → HTTPS automáticamente.
+
+{$DOMAIN_NAME} {
+    # Reverse proxy a FastAPI. `app` es el nombre del servicio en compose.
+    reverse_proxy app:8000
+
+    # Compresión: reduce ancho de banda en respuestas JSON.
+    encode gzip
+
+    # Esconde el header `Server: Caddy` para no revelar el stack.
+    header -Server
+
+    # Logs de acceso a stdout (los recoge el awslogs driver).
+    log {
+        output stdout
+        format json
+    }
+}

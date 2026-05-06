@@ -1,0 +1,86 @@
+# ============================================================================
+# Compose de PRODUCCIÓN para la EC2.
+# Diferencias con docker-compose.yml (dev):
+# - Imagen viene de ECR (no se construye local).
+# - Caddy como reverse proxy con HTTPS automático.
+# - Logs van directo a CloudWatch via awslogs driver.
+# - Volumen de Postgres montado en /mnt/pgdata (EBS persistente).
+# ============================================================================
+
+services:
+  # --------------------------------------------------------------------------
+  # App: FastAPI + LangGraph + uvicorn
+  # --------------------------------------------------------------------------
+  app:
+    image: ${ECR_REGISTRY}/ml-traductores-app:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+      - .env.infra
+    # DATABASE_URL apunta al servicio postgres de este compose.
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${PG_USER}:${PG_PASSWORD}@postgres:5432/${PG_DB}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: us-east-1
+        awslogs-group: /ml-traductores/app
+        awslogs-stream: app
+        awslogs-create-group: "true"
+
+  # --------------------------------------------------------------------------
+  # Postgres 16 oficial. Data en EBS persistente (/mnt/pgdata).
+  # --------------------------------------------------------------------------
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DB}
+    volumes:
+      - /mnt/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: us-east-1
+        awslogs-group: /ml-traductores/app
+        awslogs-stream: postgres
+        awslogs-create-group: "true"
+
+  # --------------------------------------------------------------------------
+  # Caddy: reverse proxy con HTTPS automático (Let's Encrypt).
+  # --------------------------------------------------------------------------
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN_NAME: ${DOMAIN_NAME}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data        # certificados (persistentes!)
+      - caddy-config:/config
+    depends_on:
+      - app
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: us-east-1
+        awslogs-group: /ml-traductores/app
+        awslogs-stream: caddy
+        awslogs-create-group: "true"
+
+volumes:
+  caddy-data:
+  caddy-config:

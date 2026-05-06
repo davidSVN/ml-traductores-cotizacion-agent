@@ -1,0 +1,29 @@
+# ============================================================================
+# Plantilla de variables. Copia este archivo a terraform.tfvars y rellena.
+# terraform.tfvars NO se commitea (está en .gitignore).
+# ============================================================================
+
+region        = "us-east-1"
+aws_profile   = "ml-traductores"
+instance_type = "t4g.micro"
+
+# Key pair creado en consola EC2 → Key Pairs.
+ssh_key_name = "ml-traductores-admin"
+
+# Tu IP pública con /32. Si cambia, actualizar y `terraform apply`.
+# Para obtenerla: curl ifconfig.me
+ssh_allowed_cidr = "190.67.140.204/32"
+
+# Emails que reciben alertas. Cada uno debe confirmar la suscripción SNS.
+alert_emails = [
+  "lavalatulavanderia@lavalatu.com",
+  "santiagoprado12@gmail.com",
+]
+
+# Dominio de la API. Caddy genera el cert HTTPS para este dominio exacto.
+# Apuntar este dominio (registro A en Cloudflare) al output `elastic_ip`.
+domain_name = "mltraductores-api.ai-washflow.com"
+
+# Repo GitHub que puede asumir el rol de deploy (formato: owner/repo).
+github_repo   = "davidSVN/ml-traductores-cotizacion-agent"
+github_branch = "master"
