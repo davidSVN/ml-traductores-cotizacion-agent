@@ -1,0 +1,51 @@
+name: test
+
+# Trigger: corre en cada PR y en cada push a master/main.
+on:
+  pull_request: {}
+  push:
+    branches: [master, main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # Postgres temporal solo durante este job; se descarta al terminar.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        # El job no continúa hasta que Postgres responda al healthcheck.
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -e ".[dev]"
+
+      - name: Lint con ruff
+        run: ruff check src/ || true   # warning, no falla el build (relajar después)
+
+      # Si todavía no hay tests, este step pasa sin fallar.
+      - name: Tests
+        run: |
+          if [ -d tests ]; then
+            pytest -q --tb=short
+          else
+            echo "No hay tests/ todavía. Skipping."
+          fi
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:test@localhost:5432/test

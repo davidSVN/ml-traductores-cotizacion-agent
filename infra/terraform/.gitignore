@@ -1,0 +1,19 @@
+# Variables con valores reales (incluye secrets potencialmente)
+terraform.tfvars
+*.auto.tfvars
+
+# State local (solo se usa state remoto)
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Plugin cache
+.terraform/
+.terraform.lock.hcl
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Output de plan guardado
+*.tfplan

@@ -9,6 +9,12 @@ venv/
 
 # Env
 .env
+.env.infra
+.env.local
+.env.production
+!.env.prod.example
+!.env.example
+EXECUTION_PLAN.md
 
 # IDE
 .vscode/
